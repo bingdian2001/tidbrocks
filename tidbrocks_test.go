@@ -20,7 +20,7 @@ type testSuite struct {
 
 func (s *testSuite) SetUpSuite(c *C) {
 	var (
-		d   Driver
+		d   driver
 		err error
 	)
 	s.db, err = d.Open("/tmp/test-tidb-rocksdb")

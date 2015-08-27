@@ -5,15 +5,15 @@ import (
 	"github.com/pingcap/tidb/store/localstore/engine"
 )
 
-type Driver struct {
+type driver struct {
 }
 
-func (driver Driver) Open(dbPath string) (engine.DB, error) {
+func (d driver) Open(dbPath string) (engine.DB, error) {
 	db := new(rocksDB)
 	err := db.initialize(dbPath, nil)
 	return db, err
 }
 
 func init() {
-	tidb.RegisterLocalStore("rocksdb", Driver{})
+	tidb.RegisterLocalStore("rocksdb", driver{})
 }
