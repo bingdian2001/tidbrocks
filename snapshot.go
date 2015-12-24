@@ -2,7 +2,6 @@ package tidbrocks
 
 import (
 	"github.com/juju/errors"
-	"github.com/pingcap/tidb/store/localstore/engine"
 	"github.com/tecbot/gorocksdb"
 )
 
@@ -18,6 +17,7 @@ func (sp *snapshot) Release() {
 	sp.snap.Release()
 }
 
+/*
 func (sp *snapshot) NewIterator(startKey []byte) engine.Iterator {
 	it := sp.db.rkdb.NewIterator(sp.ropt)
 	return &iterator{
@@ -26,6 +26,7 @@ func (sp *snapshot) NewIterator(startKey []byte) engine.Iterator {
 		iter:        it,
 	}
 }
+*/
 
 func (sp *snapshot) Get(key []byte) ([]byte, error) {
 	value, err := sp.db.rkdb.GetBytes(sp.ropt, key)

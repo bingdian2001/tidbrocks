@@ -101,6 +101,7 @@ func (db *rocksDB) Close() error {
 	return nil
 }
 
+/*
 func (db *rocksDB) GetSnapshot() (engine.Snapshot, error) {
 	snap := db.rkdb.NewSnapshot()
 
@@ -114,9 +115,18 @@ func (db *rocksDB) GetSnapshot() (engine.Snapshot, error) {
 		ropt: ropt,
 	}, nil
 }
+*/
+
+type rocksBatch struct {
+	*gorocksdb.WriteBatch
+}
+
+func (batch *rocksBatch) Len() int {
+	return batch.Count()
+}
 
 func (db *rocksDB) NewBatch() engine.Batch {
-	return gorocksdb.NewWriteBatch()
+	return &rocksBatch{WriteBatch: gorocksdb.NewWriteBatch()}
 }
 
 func (db *rocksDB) Get(key []byte) ([]byte, error) {
@@ -124,13 +134,64 @@ func (db *rocksDB) Get(key []byte) ([]byte, error) {
 	return value, errors.Trace(err)
 }
 
+func cloneBytes(s []byte) []byte {
+	return append([]byte(nil), s...)
+}
+
+func (db *rocksDB) Seek(key []byte) ([]byte, []byte, error) {
+	it := db.rkdb.NewIterator(db.ropt)
+	defer it.Close()
+	it.Seek(key)
+	if it.Valid() {
+		key := it.Key()
+		value := it.Value()
+		defer key.Free()
+		defer value.Free()
+		return cloneBytes(key.Data()), cloneBytes(value.Data()), nil
+	}
+
+	err := engine.ErrNotFound
+	if it.Err() != nil {
+		err = it.Err()
+	}
+
+	return nil, nil, err
+}
+
+func (db *rocksDB) MultiSeek(keys [][]byte) []*engine.MSeekResult {
+	it := db.rkdb.NewIterator(db.ropt)
+	defer it.Close()
+
+	results := make([]*engine.MSeekResult, 0, len(keys))
+	for _, key := range keys {
+		it.Seek(key)
+		if it.Valid() {
+			key := it.Key()
+			value := it.Value()
+			results = append(results, &engine.MSeekResult{
+				Key:   cloneBytes(key.Data()),
+				Value: cloneBytes(value.Data()),
+			})
+			key.Free()
+			value.Free()
+		} else {
+			err := engine.ErrNotFound
+			if it.Err() != nil {
+				err = it.Err()
+			}
+			results = append(results, &engine.MSeekResult{Err: err})
+		}
+	}
+	return results
+}
+
 func (db *rocksDB) Commit(bt engine.Batch) error {
-	batch, ok := bt.(*gorocksdb.WriteBatch)
+	batch, ok := bt.(*rocksBatch)
 	if !ok {
 		return errors.Errorf("invalid batch type %T", bt)
 	}
 
 	defer batch.Destroy()
 
-	return errors.Trace(db.rkdb.Write(db.wopt, batch))
+	return errors.Trace(db.rkdb.Write(db.wopt, batch.WriteBatch))
 }
