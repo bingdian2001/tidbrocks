@@ -1,6 +1,6 @@
 package tidbrocks
 
-import "github.com/tecbot/gorocksdb"
+import "github.com/c4pt0r/gorocksdb"
 
 type iterator struct {
 	seekToStart bool

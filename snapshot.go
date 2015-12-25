@@ -2,7 +2,7 @@ package tidbrocks
 
 import (
 	"github.com/juju/errors"
-	"github.com/tecbot/gorocksdb"
+	"github.com/c4pt0r/gorocksdb"
 )
 
 type snapshot struct {

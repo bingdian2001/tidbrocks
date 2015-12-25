@@ -3,9 +3,9 @@ package tidbrocks
 import (
 	"os"
 
+	"github.com/c4pt0r/gorocksdb"
 	"github.com/juju/errors"
 	"github.com/pingcap/tidb/store/localstore/engine"
-	"github.com/tecbot/gorocksdb"
 )
 
 type rocksDB struct {
@@ -161,27 +161,27 @@ func (db *rocksDB) Seek(key []byte) ([]byte, []byte, error) {
 func (db *rocksDB) MultiSeek(keys [][]byte) []*engine.MSeekResult {
 	it := db.rkdb.NewIterator(db.ropt)
 	defer it.Close()
+	keys, vals := db.rkdb.MultiSeek(it, keys)
 
 	results := make([]*engine.MSeekResult, 0, len(keys))
-	for _, key := range keys {
-		it.Seek(key)
-		if it.Valid() {
-			key := it.Key()
-			value := it.Value()
-			results = append(results, &engine.MSeekResult{
-				Key:   cloneBytes(key.Data()),
-				Value: cloneBytes(value.Data()),
-			})
-			key.Free()
-			value.Free()
-		} else {
+	for i, key := range keys {
+		if len(vals[i]) == 1 && vals[i][0] == '\x00' {
 			err := engine.ErrNotFound
 			if it.Err() != nil {
 				err = it.Err()
 			}
 			results = append(results, &engine.MSeekResult{Err: err})
+
+		} else {
+			key := key
+			value := vals[i]
+			results = append(results, &engine.MSeekResult{
+				Key:   cloneBytes(key),
+				Value: cloneBytes(value),
+			})
 		}
 	}
+
 	return results
 }
 
